@@ -1,3 +1,210 @@
+🔥 Kiln Programming Language — Development Roadmap
+
+This checklist tracks Kiln's progression from early prototype to a fully self-hosting programming language. if you would like to get involved in this project please reach out to me via pull request.
+
+---
+
+Current Progress
+
+- [x] Workspace structure created
+- [x] "kiln_core" crate established
+- [x] Compiler crate established
+- [x] Token system implemented
+- [x] Lexer implemented
+- [x] Project builds successfully
+
+---
+
+v0.1.0 — Functional Language (FIRST EXECUTABLE RELEASE)
+
+Goal: Kiln can execute real programs.
+
+Compiler Pipeline
+
+- [ ] Create AST definitions ("ast.rs")
+- [ ] Implement basic parser
+- [ ] Parse numeric literals
+- [ ] Parse identifiers
+- [ ] Parse expressions
+- [ ] Parse statements
+- [ ] Implement error handling for parser
+
+Interpreter (Temporary Execution Engine)
+
+- [ ] AST interpreter
+- [ ] Expression evaluation
+- [ ] Variable environment
+- [ ] Assignment support
+- [ ] Block scope handling
+
+Language Features
+
+- [ ] Numbers
+- [ ] Variables ("let")
+- [ ] Assignment
+- [ ] Binary math operators ("+ - * /")
+- [ ] Statement termination
+- [ ] Print statement
+- [ ] "{}" block syntax
+
+CLI Tooling
+
+- [ ] "kiln run file.kil"
+- [ ] File loading
+- [ ] Execution pipeline (Lexer → Parser → Interpreter)
+
+Release Criteria
+
+- [ ] Example program runs successfully
+- [ ] Basic error messages exist
+- [ ] Tagged release: v0.1.0
+
+---
+
+v0.2.0 — Bytecode & Virtual Machine
+
+Goal: Replace interpreter with a real execution backend.
+
+Compiler Architecture
+
+- [ ] Design bytecode instruction set
+- [ ] Create IR / bytecode representation
+- [ ] AST → bytecode compiler
+- [ ] Stack-based VM
+
+Virtual Machine
+
+- [ ] Instruction execution loop
+- [ ] Stack management
+- [ ] Arithmetic instructions
+- [ ] Variable storage
+- [ ] Function call support
+- [ ] Debug tracing mode
+
+Performance Foundations
+
+- [ ] Remove interpreter dependency
+- [ ] Benchmark execution
+- [ ] Memory model decisions
+
+Release Criteria
+
+- [ ] Programs execute via VM
+- [ ] Stable bytecode format
+- [ ] Tagged release: v0.2.0
+
+---
+
+v0.3.0 — Language Identity Phase
+
+Goal: Kiln becomes usable for real development.
+
+Language Features
+
+- [ ] Functions
+- [ ] Return values
+- [ ] Control flow ("if", "while", "for")
+- [ ] Module system
+- [ ] Import/export system
+- [ ] Structs or data types
+- [ ] Standard error reporting system
+
+Developer Experience
+
+- [ ] Improved compiler diagnostics
+- [ ] Source span tracking
+- [ ] Friendly syntax errors
+- [ ] REPL prototype
+
+Tooling
+
+- [ ] Formatter prototype
+- [ ] Documentation generator (basic)
+
+Release Criteria
+
+- [ ] Multi-file programs work
+- [ ] Modules compile correctly
+- [ ] Tagged release: v0.3.0
+
+---
+
+v0.5.0 — Ecosystem & Self-Hosting Preparation
+
+Goal: Kiln begins supporting itself.
+
+Standard Library
+
+- [ ] Core math library
+- [ ] String utilities
+- [ ] Collections
+- [ ] File I/O
+- [ ] Time utilities
+
+Toolchain
+
+- [ ] Package manager prototype
+- [ ] Dependency resolution
+- [ ] Build system integration
+
+Compiler Evolution
+
+- [ ] Expose compiler APIs
+- [ ] Begin rewriting tooling in Kiln
+- [ ] Bootstrap experiments
+
+Release Criteria
+
+- [ ] Real projects build in Kiln
+- [ ] Compiler components written partially in Kiln
+- [ ] Tagged release: v0.5.0
+
+---
+
+v1.0.0 — Self-Hosting Language
+
+Goal: Kiln compiles Kiln.
+
+Self Hosting
+
+- [ ] Kiln compiler written in Kiln
+- [ ] Bootstrap compiler finalized
+- [ ] Rust bootstrap optionally removable
+
+Mature Features
+
+- [ ] Stable language specification
+- [ ] Stable bytecode or native backend
+- [ ] Full standard library
+- [ ] Package ecosystem operational
+
+Toolchain
+
+- [ ] Stable CLI
+- [ ] REPL
+- [ ] Documentation site
+- [ ] Versioned releases
+
+Release Criteria
+
+- [ ] Kiln builds itself
+- [ ] Stable public API
+- [ ] Tagged release: v1.0.0
+
+---
+
+Long-Term Vision (Post-1.0 Ideas)
+
+- [ ] Native compilation backend (LLVM / custom backend)
+- [ ] JIT compiler
+- [ ] Language Server Protocol (LSP)
+- [ ] IDE integration
+- [ ] Async runtime
+- [ ] Cross-platform packaging
+- [ ] Game engine scripting integration
+
+---
+
 # Kiln Language Specification (v0.0.1) 
 
 ## Philosophy
