@@ -47,4 +47,6 @@ fn main() {
             .expect("failed to create JIT");
         unsafe {
             jit.run_function("main");
+        }
+    }
 }
