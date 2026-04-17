@@ -4,6 +4,7 @@ use inkwell::module::Module;
 use inkwell::values::{BasicValueEnum, FunctionValue, PointerValue};
 use inkwell::types::BasicTypeEnum;
 use inkwell::types::FunctionType;
+use inkwell::passes::PassManager;
 use std::collections::HashMap;
 
 pub struct Compiler<'ctx> {
@@ -12,6 +13,10 @@ pub struct Compiler<'ctx> {
     pub builder: Builder<'ctx>,
     // maps variable names to their stack allocations
     pub named_values: HashMap<String, PointerValue<'ctx>>,
+     // tracks function prototypes so we can re-declare them in new modules
+    pub function_protos: HashMap<String, crate::ast::FuncDef>,
+    // per-function optimizer
+    pub fpm: PassManager<FunctionValue<'ctx>>,
 }
 
 impl<'ctx> Compiler<'ctx> {
@@ -21,8 +26,54 @@ impl<'ctx> Compiler<'ctx> {
             module: context.create_module(module_name),
             builder: context.create_builder(),
             named_values: HashMap::new(),
+
+            // set up the legacy function pass manager
+        let fpm = PassManager::create(&module);
+        fpm.add_instruction_combining_pass();  // peephole cleanup
+        fpm.add_reassociate_pass();            // reassociate expressions
+        fpm.add_gvn_pass();                    // eliminate common subexpressions
+        fpm.add_cfg_simplification_pass();     // clean up control flow
+        fpm.initialize();
+
+        Compiler {
+            context,
+            module,
+            builder,
+            named_values: HashMap::new(),
+            function_protos: HashMap::new(),
+            fpm,
+        }
         }
     }
+
+impl<'ctx> Compiler<'ctx> {
+    // look up a function by name, re-declaring its prototype if needed
+    pub fn get_function(&mut self, name: &str) -> Option<FunctionValue<'ctx>> {
+        // already in the current module?
+        if let Some(f) = self.module.get_function(name) {
+            return Some(f);
+        }
+
+        // do we have a saved prototype we can re-declare?
+        if let Some(proto) = self.function_protos.get(name).cloned() {
+            // declare just the signature, no body
+            let param_types: Vec<inkwell::types::BasicMetadataTypeEnum> = proto.params
+                .iter()
+                .map(|p| self.resolve_type(&p.ty).into())
+                .collect();
+
+            let fn_type = match &proto.return_type {
+                Some(ty) => self.resolve_type(ty).fn_type(&param_types, false),
+                None => self.context.i64_type().fn_type(&param_types, false),
+            };
+
+            let f = self.module.add_function(&proto.name, fn_type, None);
+            return Some(f);
+        }
+
+        None
+    }
+}
 
 impl<'ctx> Compiler<'ctx> {
     pub fn resolve_type(&self, ty: &crate::ast::Type) -> BasicTypeEnum<'ctx> {
@@ -185,16 +236,17 @@ impl<'ctx> Compiler<'ctx> {
 }
 
 impl<'ctx> Compiler<'ctx> {
-    pub fn codegen_func(&mut self, func: &crate::ast::FuncDef) 
-        -> Result<FunctionValue<'ctx>, String> 
+    pub fn codegen_func(&mut self, func: &crate::ast::FuncDef)
+        -> Result<FunctionValue<'ctx>, String>
     {
-        // Build parameter types
+        // save prototype so other modules can re-declare it
+        self.function_protos.insert(func.name.clone(), func.clone());
+
         let param_types: Vec<inkwell::types::BasicMetadataTypeEnum> = func.params
             .iter()
             .map(|p| self.resolve_type(&p.ty).into())
             .collect();
 
-        // Build return type — default to i64 if not specified
         let fn_type = match &func.return_type {
             Some(ty) => {
                 let ret = self.resolve_type(ty);
@@ -203,17 +255,11 @@ impl<'ctx> Compiler<'ctx> {
             None => self.context.i64_type().fn_type(&param_types, false),
         };
 
-        // For `main`, we register it as the program entry point
-        // The name stays "main" — the linker handles the rest
-        let fn_name = &func.name;
+        let llvm_func = self.module.add_function(&func.name, fn_type, None);
 
-        let llvm_func = self.module.add_function(fn_name, fn_type, None);
-
-        // Create the entry block
         let entry = self.context.append_basic_block(llvm_func, "entry");
         self.builder.position_at_end(entry);
 
-        // Allocate stack slots for parameters and register them
         self.named_values.clear();
         for (i, param) in func.params.iter().enumerate() {
             let llvm_param = llvm_func.get_nth_param(i as u32).unwrap();
@@ -224,10 +270,12 @@ impl<'ctx> Compiler<'ctx> {
             self.named_values.insert(param.name.clone(), alloca);
         }
 
-        // Codegen the body
         for stmt in &func.body {
             self.codegen_stmt(stmt)?;
         }
+
+        // run the optimizer on the finished function
+        self.fpm.run_on(&llvm_func);
 
         Ok(llvm_func)
     }
