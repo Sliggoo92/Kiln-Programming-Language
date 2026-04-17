@@ -1,9 +1,22 @@
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
+    // Literals
+    Int(i64),
+    Float(f64),
+    StringLit(String),
+    Bool(bool),
+
+    // Identifier
+    Identifier(String),
+
     // Keywords
+    Func,
     Let,
     Const,
-    Func,
+    Export,
+    Use,
+    Struct,
+    Return,
     If,
     Else,
     Then,
@@ -13,28 +26,55 @@ pub enum Token {
     Loop,
     Break,
     Continue,
-    Return,
-    Use,
-    Export,
+    And,
+    Or,
+    Not,
 
-    // Identifiers + literals
-    Identifier(String),
-    IntLiteral(i64),
-    FloatLiteral(f64),
-    StringLiteral(String),
+    // Types
+    TypeInt,
+    TypeFloat,
+    TypeBool,
+    TypeString,
+    TypeByte,
+    TypePtr,
 
-    // Operators
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Percent,
+    // Symbols
+    Colon,        // :
+    Semicolon,    // ;
+    Comma,        // ,
+    Dot,          // .
+    LParen,       // (
+    RParen,       // )
+    LBracket,     // [
+    RBracket,     // ]
 
-    Assign,      // =
-    Equal,       // ==
-    NotEqual,    // !=
-    Greater,
-    Less,
+    // Arithmetic
+    Plus,         // +
+    Minus,        // -
+    Star,         // *
+    Slash,        // /
+    Percent,      // %
+    PlusPlus,     // ++
+    MinusMinus,   // --
+
+    // Assignment
+    Assign,       // =
+    PlusAssign,   // +=
+    MinusAssign,  // -=
+    StarAssign,   // *=
+    SlashAssign,  // /=
+
+    // Comparison
+    Eq,           // ==
+    NotEq,        // !=
+    Lt,           // <
+    Gt,           // >
+    LtEq,         // <=
+    GtEq,         // >=
+
+    // Special
+    Eof,
+}    Less,
     GreaterEqual,
     LessEqual,
 
