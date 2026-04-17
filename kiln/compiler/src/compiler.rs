@@ -21,11 +21,10 @@ pub struct Compiler<'ctx> {
 
 impl<'ctx> Compiler<'ctx> {
     pub fn new(context: &'ctx Context, module_name: &str) -> Self {
-        Compiler {
-            context,
-            module: context.create_module(module_name),
-            builder: context.create_builder(),
-            named_values: HashMap::new(),
+            let module =context.create_module(module_name);
+            let builder= context.create_builder();
+            let named_values = HashMap::new();
+
 
             // set up the legacy function pass manager
         let fpm = PassManager::create(&module);
