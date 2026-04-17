@@ -21,4 +21,9 @@ impl Parser {
     fn advance(&mut self) {
         self.position += 1;
     }
+    pub fn parse_program(&mut self) -> Result<Vec<crate::ast::TopLevel>, String> {
+    let mut items = Vec::new();
+    // parsing logic goes here
+    Ok(items)
+    }
 }
