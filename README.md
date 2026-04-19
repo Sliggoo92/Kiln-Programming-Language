@@ -33,7 +33,6 @@ The following are fully implemented and working:
 - `codegen_if` — placeholder, returns error if used
 - `codegen_while` — placeholder, returns error if used
 - `codegen_loop` — placeholder, returns error if used
-- `console.print` — parsed but not wired to output
 
 **First working Kiln program:**
 
@@ -65,10 +64,7 @@ end
 ```
 
 Work required:
-- Declare `printf` as an external LLVM function in codegen
-- Intercept `console.print` calls and redirect to `printf`
-- Handle string literal values as `i8*` pointers in codegen
-- Test with basic string output
+- get if, while, infinite loops, and basic operations functional in the language
 
 ### Priority 2 — Control flow codegen
 
