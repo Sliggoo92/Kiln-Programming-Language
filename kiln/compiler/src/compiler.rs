@@ -6,6 +6,8 @@ use inkwell::values::{BasicValueEnum, FunctionValue, PointerValue};
 use std::collections::HashMap;
 use either::Either;
 use inkwell::values::AnyValue;
+use inkwell::AddressSpace;
+use inkwell::module::Linkage;
 
 pub struct Compiler<'ctx> {
     pub context: &'ctx Context,
@@ -13,6 +15,7 @@ pub struct Compiler<'ctx> {
     pub builder: Builder<'ctx>,
     pub named_values: HashMap<String, PointerValue<'ctx>>,
     pub function_protos: HashMap<String, crate::ast::FuncDef>,
+    pub printf_fn: Option<FunctionValue<'ctx>>,  // add this
 }
 
 impl<'ctx> Compiler<'ctx> {
@@ -40,12 +43,22 @@ impl<'ctx> Compiler<'ctx> {
     ) -> Result<(), String> {
         Err("loop codegen not yet implemented".to_string())
     }
+
+    pub fn declare_printf(
+        context: &'ctx Context,
+        module: &Module<'ctx>,
+    ) -> FunctionValue<'ctx> {
+        let i8_ptr_type = context.i8_type().ptr_type(AddressSpace::default());
+        let printf_type = context.i32_type().fn_type(&[i8_ptr_type.into()], true); // true = variadic
+        module.add_function("printf", printf_type, Some(Linkage::External))
+    }
 }
 
 impl<'ctx> Compiler<'ctx> {
     pub fn new(context: &'ctx Context, module_name: &str) -> Self {
             let module =context.create_module(module_name);
             let builder= context.create_builder();
+            let printf_fn = Some(Self::declare_printf(context, &module)); 
 
         Compiler {
             context,
@@ -53,9 +66,10 @@ impl<'ctx> Compiler<'ctx> {
             builder,
             named_values: HashMap::new(),
             function_protos: HashMap::new(),
-        }
+            printf_fn,
         }
     }
+}
 
 impl<'ctx> Compiler<'ctx> {
     // look up a function by name, re-declaring its prototype if needed
@@ -164,6 +178,10 @@ impl<'ctx> Compiler<'ctx> {
 
             // Function call
             crate::ast::Expr::Call { callee, args } => {
+                if callee == "console.print" {
+                    return self.codegen_console_print(args);
+                }
+                
                 let func = self.module.get_function(callee)
                     .ok_or_else(|| format!("Unknown function: {}", callee))?;
 
@@ -181,6 +199,10 @@ impl<'ctx> Compiler<'ctx> {
                     .build_call(func, &arg_vals, "calltmp")
                     .unwrap();
 
+                if callee == "console.print" {
+                    return self.codegen_console_print(args);
+                }
+
                 // extract return value if the function is non-void
                 let raw = call.as_any_value_enum();
                 if let Ok(basic) = BasicValueEnum::try_from(raw) {
@@ -190,7 +212,7 @@ impl<'ctx> Compiler<'ctx> {
                 }
             }
 
-            // Field access e.g. console.print — resolved at a higher level
+            
             // for now we just error; module dispatch happens before codegen
             crate::ast::Expr::FieldAccess { .. } => {
                 Err("Field access should be resolved before codegen".to_string())
@@ -198,6 +220,29 @@ impl<'ctx> Compiler<'ctx> {
 
             _ => Err("Unsupported expression in codegen".to_string()),
         }
+    }
+
+    fn codegen_console_print(&mut self, args: &[crate::ast::Expr]) -> Result<BasicValueEnum<'ctx>, String> {
+        let printf_fn = self.printf_fn
+            .ok_or("printf not declared")?;
+
+        let arg = args.get(0).ok_or("console.print requires an argument")?;
+
+        let str_ptr = match arg {
+        crate::ast::Expr::StringLit(s) => {
+                    self.builder
+                .build_global_string_ptr(s, "print_str")
+                .map_err(|e| e.to_string())?
+                .as_pointer_value()
+        }
+    _ => return Err("console.print only supports string literals for now".into()),
+    };
+
+        self.builder
+            .build_call(printf_fn, &[str_ptr.into()], "printf_call")
+            .map_err(|e| e.to_string())?;
+
+            Ok(self.context.i64_type().const_zero().into())
     }
 
     fn codegen_binop(
