@@ -139,7 +139,7 @@ end
 
 ---
 
-## Blocks (Locked Design)
+## Blocks
 
 All executable blocks follow a unified structure:
 
@@ -157,7 +157,7 @@ if health <= 0 then die(); end
 
 ---
 
-## Entry Point (Locked Design)
+## Entry Point
 
 The program entry point is the `main` block. It takes no parameters and requires no return type annotation. `return 0;` exits with a status code.
 
@@ -169,7 +169,7 @@ end
 
 ---
 
-## Functions (Locked Design)
+## Functions
 
 Functions use the `func` keyword. Parameters are declared without parentheses — each parameter is `name: type` separated by spaces. Return type uses the `return` keyword followed by a colon and type.
 
@@ -263,7 +263,7 @@ Safe by default, powerful when required.
 
 ---
 
-## Scope Model (Locked Design)
+## Scope Model
 
 ### Module-Level Scope
 
