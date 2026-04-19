@@ -1,0 +1,4 @@
+main then
+    console.print("Hey Cyber SNHUppers")
+    return 0
+end 
