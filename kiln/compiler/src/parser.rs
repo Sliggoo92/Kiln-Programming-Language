@@ -32,7 +32,6 @@ impl Parser {
         }
     }
 
-    // skip optional semicolons between statements
     fn skip_semicolons(&mut self) {
         while self.current() == &Token::Semicolon {
             self.advance();
@@ -55,20 +54,21 @@ impl Parser {
 
     fn parse_top_level(&mut self) -> Result<TopLevel, String> {
         match self.current().clone() {
-            Token::Use => self.parse_use(),
+            Token::Use    => self.parse_use(),
             Token::Export => self.parse_export(),
-            Token::Func => Ok(TopLevel::Func(self.parse_func(false)?)),
-            Token::Let => self.parse_top_let(false),
-            Token::Const => self.parse_top_const(false),
+            Token::Func   => Ok(TopLevel::Func(self.parse_func(false)?)),
+            Token::Main   => self.parse_main(),
+            Token::Let    => self.parse_top_let(false),
+            Token::Const  => self.parse_top_const(false),
             other => Err(format!("unexpected top-level token: {:?}", other)),
         }
     }
 
     // --- use console; or use console.print; ---
+
     fn parse_use(&mut self) -> Result<TopLevel, String> {
         self.advance(); // eat 'use'
         let mut path = Vec::new();
-
         match self.current().clone() {
             Token::Identifier(name) => {
                 path.push(name);
@@ -76,10 +76,8 @@ impl Parser {
             }
             other => return Err(format!("expected module name, got {:?}", other)),
         }
-
-        // handle use console.print style
         while self.current() == &Token::Dot {
-            self.advance(); // eat '.'
+            self.advance();
             match self.current().clone() {
                 Token::Identifier(name) => {
                     path.push(name);
@@ -88,23 +86,34 @@ impl Parser {
                 other => return Err(format!("expected identifier after '.', got {:?}", other)),
             }
         }
-
         self.skip_semicolons();
         Ok(TopLevel::Use(UseDecl { path }))
     }
 
     // --- export func / export let / export const ---
+
     fn parse_export(&mut self) -> Result<TopLevel, String> {
         self.advance(); // eat 'export'
         match self.current().clone() {
-            Token::Func => Ok(TopLevel::Func(self.parse_func(true)?)),
-            Token::Let => self.parse_top_let(true),
+            Token::Func  => Ok(TopLevel::Func(self.parse_func(true)?)),
+            Token::Let   => self.parse_top_let(true),
             Token::Const => self.parse_top_const(true),
             other => Err(format!("expected func/let/const after export, got {:?}", other)),
         }
     }
 
-    // --- func name(params): return_type then ... end ---
+    // --- main then ... end ---
+
+    fn parse_main(&mut self) -> Result<TopLevel, String> {
+        self.advance(); // eat 'main'
+        self.expect(&Token::Then)?;
+        let body = self.parse_block()?;
+        self.expect(&Token::End)?;
+        Ok(TopLevel::Main(body))
+    }
+
+    // --- func name param: type param: type return:type then ... end ---
+
     fn parse_func(&mut self, exported: bool) -> Result<FuncDef, String> {
         self.advance(); // eat 'func'
 
@@ -113,13 +122,22 @@ impl Parser {
             other => return Err(format!("expected function name, got {:?}", other)),
         };
 
-        self.expect(&Token::LParen)?;
-        let params = self.parse_params()?;
-        self.expect(&Token::RParen)?;
+        // parse params: name: type name: type ... until 'return' or 'then'
+        let mut params = Vec::new();
+        while self.current() != &Token::Then && self.current() != &Token::Return {
+            let pname = match self.current().clone() {
+                Token::Identifier(n) => { self.advance(); n }
+                other => return Err(format!("expected param name, got {:?}", other)),
+            };
+            self.expect(&Token::Colon)?;
+            let ty = self.parse_type()?;
+            params.push(Param { name: pname, ty });
+        }
 
-        // optional return type
-        let return_type = if self.current() == &Token::Colon {
-            self.advance();
+        // optional return type: return:int
+        let return_type = if self.current() == &Token::Return {
+            self.advance();              // eat 'return'
+            self.expect(&Token::Colon)?; // eat ':'
             Some(self.parse_type()?)
         } else {
             None
@@ -132,26 +150,8 @@ impl Parser {
         Ok(FuncDef { exported, name, params, return_type, body })
     }
 
-    // parse comma-separated parameters: name: type, name: type
-    fn parse_params(&mut self) -> Result<Vec<Param>, String> {
-        let mut params = Vec::new();
-        while self.current() != &Token::RParen {
-            let name = match self.current().clone() {
-                Token::Identifier(n) => { self.advance(); n }
-                other => return Err(format!("expected param name, got {:?}", other)),
-            };
-            self.expect(&Token::Colon)?;
-            let ty = self.parse_type()?;
-            params.push(Param { name, ty });
-
-            if self.current() == &Token::Comma {
-                self.advance();
-            }
-        }
-        Ok(params)
-    }
-
     // parse a type annotation: int, float, bool, string, byte, ptr, int[10], int[10][10]
+
     fn parse_type(&mut self) -> Result<Type, String> {
         let base = match self.current().clone() {
             Token::TypeInt    => { self.advance(); Type::Int }
@@ -163,7 +163,6 @@ impl Parser {
             other => return Err(format!("expected type, got {:?}", other)),
         };
 
-        // check for array dimensions: int[10] or int[10][10]
         if self.current() == &Token::LBracket {
             self.advance();
             let size = match self.current().clone() {
@@ -172,7 +171,6 @@ impl Parser {
             };
             self.expect(&Token::RBracket)?;
 
-            // check for second dimension
             if self.current() == &Token::LBracket {
                 self.advance();
                 let size2 = match self.current().clone() {
@@ -189,7 +187,8 @@ impl Parser {
         Ok(base)
     }
 
-    // --- parse a block of statements until 'end', 'else', or 'else if' ---
+    // --- parse a block of statements until 'end', 'else', or eof ---
+
     fn parse_block(&mut self) -> Result<Vec<Stmt>, String> {
         let mut stmts = Vec::new();
         loop {
@@ -203,6 +202,7 @@ impl Parser {
     }
 
     // --- Statements ---
+
     fn parse_stmt(&mut self) -> Result<Stmt, String> {
         let stmt = match self.current().clone() {
             Token::Let      => self.parse_let(),
@@ -268,6 +268,7 @@ impl Parser {
     }
 
     // if condition then ... else if condition then ... else then ... end
+
     fn parse_if(&mut self) -> Result<Stmt, String> {
         self.advance(); // eat 'if'
         let condition = self.parse_expr()?;
@@ -286,7 +287,6 @@ impl Parser {
                 let ei_body = self.parse_block()?;
                 else_ifs.push((ei_cond, ei_body));
             } else {
-                // plain else — may optionally have 'then'
                 if self.current() == &Token::Then {
                     self.advance();
                 }
@@ -309,6 +309,7 @@ impl Parser {
     }
 
     // for i: int = 0; i < 10; i++ then ... end
+
     fn parse_for(&mut self) -> Result<Stmt, String> {
         self.advance(); // eat 'for'
         let init = Box::new(self.parse_let()?);
@@ -330,10 +331,8 @@ impl Parser {
         Ok(Stmt::Loop { body })
     }
 
-    // either a bare expression or an assignment: x = expr
     fn parse_expr_or_assign(&mut self) -> Result<Stmt, String> {
         let expr = self.parse_expr()?;
-
         if self.current() == &Token::Assign {
             self.advance();
             let value = self.parse_expr()?;
@@ -343,11 +342,9 @@ impl Parser {
                 return Err("left side of assignment must be a variable name".to_string());
             }
         }
-
         Ok(Stmt::ExprStmt(expr))
     }
 
-    // top-level let/const with optional export flag
     fn parse_top_let(&mut self, exported: bool) -> Result<TopLevel, String> {
         self.advance(); // eat 'let'
         let name = match self.current().clone() {
@@ -491,7 +488,7 @@ impl Parser {
             }
             Token::Identifier(name) => {
                 self.advance();
-                // function call?
+                // function call: name(args)
                 if self.current() == &Token::LParen {
                     self.advance();
                     let mut args = Vec::new();
@@ -504,14 +501,13 @@ impl Parser {
                     self.expect(&Token::RParen)?;
                     return Ok(Expr::Call { callee: name, args });
                 }
-                // field access: module.symbol
+                // field access or module call: name.field or name.method(args)
                 if self.current() == &Token::Dot {
                     self.advance();
                     let field = match self.current().clone() {
                         Token::Identifier(f) => { self.advance(); f }
                         other => return Err(format!("expected field name, got {:?}", other)),
                     };
-                    // could be a method call too: obj.method(args)
                     if self.current() == &Token::LParen {
                         self.advance();
                         let mut args = Vec::new();
@@ -543,4 +539,4 @@ impl Parser {
             other => Err(format!("unexpected token in expression: {:?}", other)),
         }
     }
-                 }
+}

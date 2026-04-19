@@ -1,38 +1,51 @@
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
+use inkwell::types::{BasicType, BasicTypeEnum};
 use inkwell::values::{BasicValueEnum, FunctionValue, PointerValue};
-use inkwell::types::BasicTypeEnum;
-use inkwell::types::FunctionType;
-use inkwell::passes::PassManager;
 use std::collections::HashMap;
+use either::Either;
+use inkwell::values::AnyValue;
 
 pub struct Compiler<'ctx> {
     pub context: &'ctx Context,
     pub module: Module<'ctx>,
     pub builder: Builder<'ctx>,
-    // maps variable names to their stack allocations
     pub named_values: HashMap<String, PointerValue<'ctx>>,
-     // tracks function prototypes so we can re-declare them in new modules
     pub function_protos: HashMap<String, crate::ast::FuncDef>,
-    // per-function optimizer
-    pub fpm: PassManager<FunctionValue<'ctx>>,
+}
+
+impl<'ctx> Compiler<'ctx> {
+    pub fn codegen_if(
+        &mut self,
+        _condition: &crate::ast::Expr,
+        _body: &[crate::ast::Stmt],
+        _else_ifs: &[(crate::ast::Expr, Vec<crate::ast::Stmt>)],
+        _else_body: &Option<Vec<crate::ast::Stmt>>,
+    ) -> Result<(), String> {
+        Err("if codegen not yet implemented".to_string())
+    }
+
+    pub fn codegen_while(
+        &mut self,
+        _condition: &crate::ast::Expr,
+        _body: &[crate::ast::Stmt],
+    ) -> Result<(), String> {
+        Err("while codegen not yet implemented".to_string())
+    }
+
+    pub fn codegen_loop(
+        &mut self,
+        _body: &[crate::ast::Stmt],
+    ) -> Result<(), String> {
+        Err("loop codegen not yet implemented".to_string())
+    }
 }
 
 impl<'ctx> Compiler<'ctx> {
     pub fn new(context: &'ctx Context, module_name: &str) -> Self {
             let module =context.create_module(module_name);
             let builder= context.create_builder();
-            let named_values = HashMap::new();
-
-
-            // set up the legacy function pass manager
-        let fpm = PassManager::create(&module);
-        fpm.add_instruction_combining_pass();  // peephole cleanup
-        fpm.add_reassociate_pass();            // reassociate expressions
-        fpm.add_gvn_pass();                    // eliminate common subexpressions
-        fpm.add_cfg_simplification_pass();     // clean up control flow
-        fpm.initialize();
 
         Compiler {
             context,
@@ -40,7 +53,6 @@ impl<'ctx> Compiler<'ctx> {
             builder,
             named_values: HashMap::new(),
             function_protos: HashMap::new(),
-            fpm,
         }
         }
     }
@@ -81,14 +93,12 @@ impl<'ctx> Compiler<'ctx> {
             crate::ast::Type::Float  => self.context.f64_type().into(),
             crate::ast::Type::Bool   => self.context.bool_type().into(),
             crate::ast::Type::Byte   => self.context.i8_type().into(),
-            crate::ast::Type::Ptr    => self.context
-                                            .i8_type()
-                                            .ptr_type(inkwell::AddressSpace::default())
-                                            .into(),
-            crate::ast::Type::StringType => self.context
-                                                .i8_type()
-                                                .ptr_type(inkwell::AddressSpace::default())
-                                                .into(),
+                crate::ast::Type::Ptr => {
+                    self.context.ptr_type(inkwell::AddressSpace::default()).into()
+                }
+                crate::ast::Type::StringType => {
+                    self.context.ptr_type(inkwell::AddressSpace::default()).into()
+                }
             crate::ast::Type::Array(inner, size) => {
                 let inner_ty = self.resolve_type(inner);
                 inner_ty.array_type(*size as u32).into()
@@ -167,9 +177,17 @@ impl<'ctx> Compiler<'ctx> {
                     .build_call(func, &arg_vals, "calltmp")
                     .unwrap();
 
-                call.try_as_basic_value()
-                    .left()
-                    .ok_or("Function returned void".to_string())
+                let call = self.builder
+                    .build_call(func, &arg_vals, "calltmp")
+                    .unwrap();
+
+                // extract return value if the function is non-void
+                let raw = call.as_any_value_enum();
+                if let Ok(basic) = BasicValueEnum::try_from(raw) {
+                    Ok(basic)
+                } else {
+                    Err("Function returned void".to_string())
+                }
             }
 
             // Field access e.g. console.print — resolved at a higher level
@@ -273,12 +291,11 @@ impl<'ctx> Compiler<'ctx> {
             self.codegen_stmt(stmt)?;
         }
 
-        // run the optimizer on the finished function
-        self.fpm.run_on(&llvm_func);
 
         Ok(llvm_func)
     }
 }
+
 
 impl<'ctx> Compiler<'ctx> {
     pub fn codegen_stmt(&mut self, stmt: &crate::ast::Stmt) 

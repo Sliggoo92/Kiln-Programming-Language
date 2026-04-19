@@ -1,3 +1,4 @@
+mod token;
 mod lexer;
 mod parser;
 mod ast;
@@ -10,18 +11,16 @@ use lexer::Lexer;
 use parser::Parser;
 
 fn main() {
-    // initialize LLVM native target — required before JIT can run
     inkwell::targets::Target::initialize_native(
         &inkwell::targets::InitializationConfig::default()
     ).expect("failed to initialize native target");
 
-    
     let context = inkwell::context::Context::create();
-    let mut compiler = Compiler::new(&context, "my_program");
+    let mut compiler = Compiler::new(&context, "kiln_program");
 
-    // source code of your program
-    let source = std::fs::read_to_string("program.kiln").expect("could not read file");
-    
+    let source = std::fs::read_to_string("program.kiln")
+        .expect("could not read file");
+
     let mut lexer = Lexer::new(&source);
     let tokens = lexer.tokenize();
     let mut parser = Parser::new(tokens);
@@ -30,23 +29,34 @@ fn main() {
     for item in &ast {
         match item {
             TopLevel::Func(func_def) => {
-                compiler.codegen_func(func_def).expect("codegen error");
+                compiler.codegen_func(&func_def).expect("codegen error");
             }
-            TopLevel::Use(_) => {
-                // module resolution handled separately
+            TopLevel::Main(body) => {
+                let func_def = crate::ast::FuncDef {
+                    exported: false,
+                    name: "main".to_string(),
+                    params: vec![],
+                    return_type: None,
+                    body: body.clone(),
+                };
+                compiler.codegen_func(&func_def).expect("codegen error");
             }
+            TopLevel::Use(_) => {}
             _ => {}
         }
     }
 
-    // emit LLVM IR to stdout for now
     compiler.module.print_to_stderr();
 
     if compiler.module.get_function("main").is_some() {
-        let jit = jit::KilnJIT::new(&compiler.module)
+        let engine = compiler.module
+            .create_jit_execution_engine(inkwell::OptimizationLevel::Default)
             .expect("failed to create JIT");
         unsafe {
-            jit.run_function("main");
+            let func = engine
+                .get_function::<unsafe extern "C" fn() -> i64>("main")
+                .expect("main not found in JIT");
+            func.call();
         }
     }
 }

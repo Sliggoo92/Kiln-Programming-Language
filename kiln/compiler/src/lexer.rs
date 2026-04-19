@@ -1,4 +1,4 @@
-use kiln_core::token::Token;
+pub use crate::token::Token;
 
 pub struct Lexer {
     source: Vec<char>,
@@ -45,7 +45,7 @@ impl Lexer {
             }
         }
     }
-
+//for keyword matching with tokens from token.rs
     fn read_identifier(&mut self) -> Token {
         let mut ident = String::new();
         while let Some(c) = self.current() {
@@ -58,6 +58,7 @@ impl Lexer {
         }
 
         match ident.as_str() {
+            "main"     => Token::Main,
             "func"     => Token::Func,
             "let"      => Token::Let,
             "const"    => Token::Const,
@@ -209,12 +210,6 @@ impl Lexer {
             if done { break; }
         }
         tokens
-    }
-}
-                self.advance();
-                self.next_token()
-            }
-        }
     }
 }
 

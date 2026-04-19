@@ -1,358 +1,369 @@
-🔥 Kiln Programming Language — Development Roadmap
-
-This checklist tracks Kiln's progression from early prototype to a fully self-hosting programming language. if you would like to get involved in this project please reach out to me via pull request.
+# Kiln Programming Language — Specification & Roadmap (v0.0.2)
 
 ---
 
-Current Progress
+## Current Status
 
-- [x] Workspace structure created
-- [x] "kiln_core" crate established
-- [x] Compiler crate established
-- [x] Token system implemented
-- [x] Lexer implemented
-- [x] Project builds successfully
+**Compiler pipeline: FUNCTIONAL**
 
----
+The following are fully implemented and working:
 
-v0.1.0 — Functional Language (FIRST EXECUTABLE RELEASE)
+- Workspace and crate structure
+- Token system
+- Lexer
+- Full parser (all language constructs)
+- AST definitions
+- LLVM IR code generation via inkwell
+- JIT execution engine
+- `main then ... end` entry point
+- Function definitions with paren-less parameter syntax
+- Return type annotation via `return:type`
+- Variable declarations (`let`, `const`)
+- All arithmetic, assignment, and comparison operators
+- Logical keyword operators (`and`, `or`, `not`)
+- Control flow parsing (`if/else if/else`, `while`, `for`, `loop`)
+- Module import parsing (`use console;`, `use console.print;`)
+- Export keyword parsing
+- Fixed and 2D array type annotations
+- Struct definition parsing
+- Comments (`//`)
 
-Goal: Kiln can execute real programs.
+**Known stubs (parsed but not yet codegen'd):**
 
-Compiler Pipeline
+- `codegen_if` — placeholder, returns error if used
+- `codegen_while` — placeholder, returns error if used
+- `codegen_loop` — placeholder, returns error if used
+- `console.print` — parsed but not wired to output
 
-- [ ] Create AST definitions ("ast.rs")
-- [ ] Implement basic parser
-- [ ] Parse numeric literals
-- [ ] Parse identifiers
-- [ ] Parse expressions
-- [ ] Parse statements
-- [ ] Implement error handling for parser
+**First working Kiln program:**
 
-Interpreter (Temporary Execution Engine)
+```
+main then
+    return 0;
+end
+```
 
-- [ ] AST interpreter
-- [ ] Expression evaluation
-- [ ] Variable environment
-- [ ] Assignment support
-- [ ] Block scope handling
-
-Language Features
-
-- [ ] Numbers
-- [ ] Variables ("let")
-- [ ] Assignment
-- [ ] Binary math operators ("+ - * /")
-- [ ] Statement termination
-- [ ] Print statement
-- [ ] "{}" block syntax
-
-CLI Tooling
-
-- [ ] "kiln run file.kil"
-- [ ] File loading
-- [ ] Execution pipeline (Lexer → Parser → Interpreter)
-
-Release Criteria
-
-- [ ] Example program runs successfully
-- [ ] Basic error messages exist
-- [ ] Tagged release: v0.1.0
+Produces valid LLVM IR and executes via JIT.
 
 ---
 
-v0.2.0 — Bytecode & Virtual Machine
+## Next Goals (v0.0.3 targets)
 
-Goal: Replace interpreter with a real execution backend.
+### Priority 1 — `console.print`
 
-Compiler Architecture
+Wire `console.print("text")` to LLVM's external `printf`. This is the single most important next step because without visible output, nothing else can be meaningfully tested.
 
-- [ ] Design bytecode instruction set
-- [ ] Create IR / bytecode representation
-- [ ] AST → bytecode compiler
-- [ ] Stack-based VM
+Target syntax:
 
-Virtual Machine
+```
+use console;
 
-- [ ] Instruction execution loop
-- [ ] Stack management
-- [ ] Arithmetic instructions
-- [ ] Variable storage
-- [ ] Function call support
-- [ ] Debug tracing mode
+main then
+    console.print("Hello from Kiln!\n");
+    return 0;
+end
+```
 
-Performance Foundations
+Work required:
+- Declare `printf` as an external LLVM function in codegen
+- Intercept `console.print` calls and redirect to `printf`
+- Handle string literal values as `i8*` pointers in codegen
+- Test with basic string output
 
-- [ ] Remove interpreter dependency
-- [ ] Benchmark execution
-- [ ] Memory model decisions
+### Priority 2 — Control flow codegen
 
-Release Criteria
+Implement the three stubbed codegen methods using LLVM basic blocks:
 
-- [ ] Programs execute via VM
-- [ ] Stable bytecode format
-- [ ] Tagged release: v0.2.0
+- `codegen_if` — conditional branch with merge block
+- `codegen_while` — loop block with condition check and back-edge
+- `codegen_loop` / `break` / `continue` — infinite loop with exit tracking
 
----
+### Priority 3 — Variable type tracking
 
-v0.3.0 — Language Identity Phase
-
-Goal: Kiln becomes usable for real development.
-
-Language Features
-
-- [ ] Functions
-- [ ] Return values
-- [ ] Control flow ("if", "while", "for")
-- [ ] Module system
-- [ ] Import/export system
-- [ ] Structs or data types
-- [ ] Standard error reporting system
-
-Developer Experience
-
-- [ ] Improved compiler diagnostics
-- [ ] Source span tracking
-- [ ] Friendly syntax errors
-- [ ] REPL prototype
-
-Tooling
-
-- [ ] Formatter prototype
-- [ ] Documentation generator (basic)
-
-Release Criteria
-
-- [ ] Multi-file programs work
-- [ ] Modules compile correctly
-- [ ] Tagged release: v0.3.0
+Currently `let` defaults all variables to `i64`. Each variable needs to carry its declared type through from declaration to load/store so that `float`, `bool`, and `string` variables work correctly.
 
 ---
-
-v0.5.0 — Ecosystem & Self-Hosting Preparation
-
-Goal: Kiln begins supporting itself.
-
-Standard Library
-
-- [ ] Core math library
-- [ ] String utilities
-- [ ] Collections
-- [ ] File I/O
-- [ ] Time utilities
-
-Toolchain
-
-- [ ] Package manager prototype
-- [ ] Dependency resolution
-- [ ] Build system integration
-
-Compiler Evolution
-
-- [ ] Expose compiler APIs
-- [ ] Begin rewriting tooling in Kiln
-- [ ] Bootstrap experiments
-
-Release Criteria
-
-- [ ] Real projects build in Kiln
-- [ ] Compiler components written partially in Kiln
-- [ ] Tagged release: v0.5.0
-
----
-
-v1.0.0 — Self-Hosting Language
-
-Goal: Kiln compiles Kiln.
-
-Self Hosting
-
-- [ ] Kiln compiler written in Kiln
-- [ ] Bootstrap compiler finalized
-- [ ] Rust bootstrap optionally removable
-
-Mature Features
-
-- [ ] Stable language specification
-- [ ] Stable bytecode or native backend
-- [ ] Full standard library
-- [ ] Package ecosystem operational
-
-Toolchain
-
-- [ ] Stable CLI
-- [ ] REPL
-- [ ] Documentation site
-- [ ] Versioned releases
-
-Release Criteria
-
-- [ ] Kiln builds itself
-- [ ] Stable public API
-- [ ] Tagged release: v1.0.0
-
----
-
-Long-Term Vision (Post-1.0 Ideas)
-
-- [ ] Native compilation backend (LLVM / custom backend)
-- [ ] JIT compiler
-- [ ] Language Server Protocol (LSP)
-- [ ] IDE integration
-- [ ] Async runtime
-- [ ] Cross-platform packaging
-- [ ] Game engine scripting integration
-
----
-
-# Kiln Language Specification (v0.0.1) 
 
 ## Philosophy
 
-Kiln is a **portable systems language** designed to balance low-level power with modern developer usability. Core principles: - Portable First — programs run anywhere via a bytecode VM with optional native compilation. - Statement-Oriented — programs are written as clear instructions to the machine. - English-Readable Syntax — keywords favored over symbolic shorthand. - Mutable by Default — ease of use and familiarity. - Optional Immutability — safety when desired. - Explicit Structure — predictable behavior over hidden magic. - Minimal Runtime Baggage — avoids heavyweight scripting environments. - Fast Compile + Fast Run workflow. - Engineer / Hacker Feel — transparent and mechanical programming experience.
+Kiln is a **portable systems language** designed to balance low-level power with modern developer usability.
 
---- 
-## Language Identity 
-*Name:* Kiln Industrial and production-inspired naming. Kiln symbolizes creation, machinery, and systems engineering. 
+Core principles:
 
---- 
-## Execution Model 
-Kiln uses a **top-level execution model**. Programs execute statements in file order unless inside a function. No mandatory main() or start() entry point exists. Example:
-use console;
+- Portable First — programs run anywhere via a bytecode VM with optional native compilation.
+- Statement-Oriented — programs are written as clear instructions to the machine.
+- English-Readable Syntax — keywords favored over symbolic shorthand.
+- Mutable by Default — ease of use and familiarity.
+- Optional Immutability — safety when desired.
+- Explicit Structure — predictable behavior over hidden magic.
+- Minimal Runtime Baggage — avoids heavyweight scripting environments.
+- Fast Compile + Fast Run workflow.
+- Engineer / Hacker Feel — transparent and mechanical programming experience.
 
-console.print("Program started");
+---
 
-This allows Kiln to function as: - a scripting language - a systems language - an embeddable language without changing syntax. --- ## Programming Model Kiln is **statement-oriented**. Programs are structured as ordered instructions. Example:
+## Language Identity
 
+**Name:** Kiln
+
+Industrial and production-inspired naming. Kiln symbolizes creation, machinery, and systems engineering.
+
+**File extension:** `.kiln`
+
+---
+
+## Execution Model
+
+Kiln uses a **top-level execution model**. Programs execute statements in file order unless inside a function. The entry point is the `main` block — no parentheses, no return type declaration required.
+
+```
+main then
+    console.print("Program started");
+    return 0;
+end
+```
+
+This allows Kiln to function as a scripting language, a systems language, or an embeddable language without changing syntax.
+
+---
+
+## Programming Model
+
+Kiln is **statement-oriented**. Programs are structured as ordered instructions.
+
+```
 if x > 0 then
     console.print("positive");
 end
+```
 
---- 
+---
 
-## Blocks (Locked Design) All executable blocks follow a unified structure:
+## Blocks (Locked Design)
 
+All executable blocks follow a unified structure:
+
+```
 KEYWORD ... then
     statements
 end
+```
 
-Applies to: - conditionals - loops - functions - future constructs Benefits: - predictable parsing - clear readability - consistent mental model --- ## Functions (Locked Design) Functions are defined using the func keyword.
+Applies to conditionals, loops, functions, and future constructs. Single-line form is allowed:
 
-func heal(amount: int) then
-    health = health + amount;
+```
+if health <= 0 then die(); end
+```
+
+---
+
+## Entry Point (Locked Design)
+
+The program entry point is the `main` block. It takes no parameters and requires no return type annotation. `return 0;` exits with a status code.
+
+```
+main then
+    return 0;
 end
+```
 
-Function syntax:
-func name(parameters): return_type then
-    statements;
-end
+---
 
-Return type is optional if inferable. Example:
+## Functions (Locked Design)
 
-func add(a: int, b: int): int then
+Functions use the `func` keyword. Parameters are declared without parentheses — each parameter is `name: type` separated by spaces. Return type uses the `return` keyword followed by a colon and type.
+
+```
+func add a: int b: int return:int then
     return a + b;
 end
+```
 
---- 
-## Type System - Strong static typing. - Type inference supported where obvious. - Dynamic behavior allowed through controlled mechanisms. 
+No return type needed for void functions:
 
-### Mutability Mutable by default:
+```
+func greet name: string then
+    console.print(name);
+end
+```
+
+---
+
+## Type System
+
+- Strong static typing.
+- Type inference supported where obvious.
+- Dynamic behavior allowed through controlled mechanisms.
+
+### Mutability
+
+Mutable by default:
+
+```
 let x = 5;
-Immutable variables:
+```
+
+Immutable:
+
+```
 const y = 10;
+```
 
 ---
-## Type Annotation Syntax (Locked) Colon-based annotation. Rules: - No space before : - Optional space after : Examples:
+
+## Type Annotation Syntax (Locked)
+
+Colon-based annotation. No space before `:`, optional space after.
+
+```
 let health:int = 100;
-let stamina: int = 50; 
+let stamina: int = 50;
+```
 
 ---
-## Primitive Types Initial primitive set:
+
+## Primitive Types
+
+```
 int
 float
 bool
 string
 byte
 ptr
+```
 
 ---
-## Memory Model - Garbage collection enabled by default. - Optional manual memory management via modules. Example:
+
+## Arrays (Locked Design)
+
+Fixed-size arrays only. Jagged (2D) arrays supported.
+
+```
+let scores: int[10];
+let grid: int[10][10];
+```
+
+Dynamic arrays are not part of the current spec. They may be introduced via standard library modules in a later version.
+
+---
+
+## Memory Model
+
+Garbage collection enabled by default. Optional manual memory management via modules:
+
+```
 use memory.manual;
 
 let buffer: ptr = alloc(1024);
 free(buffer);
-Goal: Safe by default, powerful when required.
+```
 
---- 
-## Scope Model (Locked Design) ### Module-Level Scope Variables declared at the top of a file, outside any function, are **module-level**. All functions within the same file can access them freely — no special keywords required.
+Safe by default, powerful when required.
+
+---
+
+## Scope Model (Locked Design)
+
+### Module-Level Scope
+
+Variables declared at the top of a file, outside any function, are module-level. All functions in the same file can access them freely.
+
+```
 let health: int = 100;
 
-func damage(amount: int) then
+func damage amount: int then
     health -= amount;
 end
+```
 
-func heal(amount: int) then
-    health += amount;
-end
+### Block Scope
 
-### Block Scope Variables declared inside a block (if, loop constructs, functions, etc.) are destroyed when that block ends. They do not leak outward.
+Variables declared inside a block are destroyed when that block ends.
 
+```
 if health > 0 then
     let message: string = "alive";
 end
 
-console.print(message);   // ERROR: message is out of scope
+console.print(message);   // ERROR: out of scope
+```
 
-### No Implicit Closure Capture Functions do not silently capture variables from outer scopes. Shared state lives at module level in the file where it belongs. Functions in other files access it through explicit imports only.
+### No Implicit Closure Capture
 
---- 
-## Module System (Locked Design) Each .soot file is a module. Nothing is shared across file boundaries unless explicitly exported and imported. ### Exporting Use the export keyword to make a symbol accessible to other modules:
+Functions do not silently capture outer variables. Shared state lives at module level. Cross-file access requires explicit import.
 
+---
+
+## Module System (Locked Design)
+
+Each `.kiln` file is a module. Nothing crosses file boundaries unless exported and imported.
+
+### Exporting
+
+```
 // player.kiln
 export let health: int = 100;
 
-export func damage(amount: int) then
+export func damage amount: int then
     health -= amount;
 end
+```
 
-Symbols without export are private to that file. ### Importing Two valid forms: **Full module import** — imports the whole module, accessed via qualified name:
+### Importing
 
+Full module import — access via qualified name:
+
+```
 use console;
-
 console.print("hello");
+```
 
-**Symbol import** — imports a single exported symbol directly into the current namespace:
+Symbol import — access directly:
 
+```
 use console.print;
-
 print("hello");
+```
 
-Both forms are legal. The tradeoff is on the programmer: a symbol import gives you the short unqualified name but only for that one symbol. Importing the full module gives access to everything it exports via the module.symbol pattern. Example of cross-file module usage:
+Cross-file usage:
 
+```
 // combat.kiln
 use player;
 
-func resolve_hit() then
+func resolve_hit then
     player.damage(10);
     player.health -= 5;
 end
+```
 
 ---
-## Comment Syntax (Locked) Single-line comments use //:
 
-// this is a comment
+## Comment Syntax (Locked)
+
+```
+// single-line comment
 let x = 5;   // inline comment
+```
 
---- 
-## Operators (Locked Design) Soot draws a clear line between symbolic and keyword operators based on readability.
+---
+
+## Operators (Locked Design)
+
 ### Arithmetic — Symbol
+
+```
 +   addition
 -   subtraction
 *   multiplication
 /   division
 %   modulo
+```
 
 ### Assignment — Symbol
+
+```
 =   assign
 +=  add and assign
 -=  subtract and assign
@@ -360,42 +371,34 @@ let x = 5;   // inline comment
 /=  divide and assign
 ++  increment
 --  decrement
+```
 
 ### Comparison — Symbol
+
+```
 >   greater than
 <   less than
 >=  greater than or equal
 <=  less than or equal
 ==  equal to
 !=  not equal to
+```
 
 ### Logical — Keyword
+
+```
 and   logical AND
 or    logical OR
 not   logical NOT
-
-Examples:
-
-if health > 0 and stamina < 100 then
-    stamina += 10;
-end
-
-if not alive or health <= 0 then
-    die();
-end
-
-Rationale: symbols are used where mathematical convention is universal and dense expressions are expected. Keywords are used for logical operators where English readability adds clarity without creating wall-of-text problems. 
+```
 
 ---
+
 ## Control Flow (Locked Design)
+
 ### Conditionals
 
-if condition then
-    statements;
-end
-
-With else branches:
-
+```
 if health <= 0 then
     die();
 else if health < 20 then
@@ -403,51 +406,112 @@ else if health < 20 then
 else then
     console.print("ok");
 end
+```
 
-Single-line form allowed:
+### While Loop
 
-if health <= 0 then die(); end
-
-### While Loop Repeats while condition is true:
-
+```
 while alive then
     update();
 end
+```
 
-### For Loop C-style three-part loop without parentheses:
+### For Loop
 
+```
 for i: int = 0; i < 10; i++ then
     console.print(i);
 end
+```
 
-### Infinite Loop Runs until explicitly broken:
+### Infinite Loop
 
+```
 loop then
     if done then
         break;
     end
 end
+```
 
 ### Loop Control
-break;      // exit the loop immediately
-continue;   // skip to the next iteration
+
+```
+break;      // exit the loop
+continue;   // skip to next iteration
+```
 
 ---
-## Syntax Philosophy - Keywords preferred over abbreviations where practical. - Semicolons allowed and encouraged. - Explicit block endings. - Indentation optional for compilation (readability only). Single-line blocks allowed:
 
-if health <= 0 then die(); end
+## Compilation Targets
 
---- 
-## Compilation Targets 1. Kiln Bytecode (default) 2. Native Binary (optional) 3. Embedded VM execution 
+1. Native Binary via LLVM JIT (current)
+2. Kiln Bytecode (planned)
+3. Embedded VM execution (planned)
 
---- 
-## Intended Use Cases - Systems programming - Cross-platform tools - Game development - Embedded scripting - Experimental systems research 
+---
 
---- 
-## Non-Goals - Not purely functional. - Not scripting-only. - Not tied to a specific engine or vendor. 
+## Intended Use Cases
 
---- 
-## Development Philosophy Kiln evolves iteratively: - Early versions remain usable. - Stability grows over time. - Real-world experimentation encouraged. 
+- Systems programming
+- Cross-platform tools
+- Game development
+- Embedded scripting
+- Experimental systems research
 
---- 
-## Status **Version 0.0.1 — Foundational Language Definition**
+---
+
+## Non-Goals
+
+- Not purely functional.
+- Not scripting-only.
+- Not tied to a specific engine or vendor.
+
+---
+
+## Development Philosophy
+
+Kiln evolves iteratively. Early versions remain usable. Stability grows over time. Real-world experimentation is encouraged.
+
+---
+
+## Roadmap
+
+### v0.0.3 — Output & Control Flow
+- `console.print` wired to output
+- `codegen_if` implemented
+- `codegen_while` implemented
+- `codegen_loop` / `break` / `continue` implemented
+- Variable type tracking through codegen
+
+### v0.1.0 — Functional Language (First Executable Release)
+- Multi-function programs work
+- Basic standard library (`console`, `math`)
+- CLI: `kiln run file.kiln`
+- Basic error messages
+
+### v0.2.0 — Bytecode & Virtual Machine
+- Bytecode instruction set designed
+- Stack-based VM
+- AST to bytecode compiler
+
+### v0.3.0 — Language Identity Phase
+- Full module system working
+- Structs
+- REPL prototype
+- Formatter prototype
+
+### v0.5.0 — Ecosystem & Self-Hosting Preparation
+- Standard library: math, strings, collections, file I/O
+- Package manager prototype
+- Begin rewriting tooling in Kiln
+
+### v1.0.0 — Self-Hosting Language
+- Kiln compiler written in Kiln
+- Stable language specification
+- Full standard library
+- Package ecosystem operational
+
+---
+
+**Version 0.0.2 — Compiler Pipeline Functional**
