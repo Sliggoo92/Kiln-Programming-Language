@@ -211,7 +211,7 @@ const y = 10;
 
 ---
 
-## Type Annotation Syntax (Locked)
+## Type Annotation Syntax
 
 Colon-based annotation. No space before `:`, optional space after.
 
@@ -235,7 +235,7 @@ ptr
 
 ---
 
-## Arrays (Locked Design)
+## Arrays
 
 Fixed-size arrays only. Jagged (2D) arrays supported.
 
@@ -295,7 +295,7 @@ Functions do not silently capture outer variables. Shared state lives at module 
 
 ---
 
-## Module System (Locked Design)
+## Module System
 
 Each `.kiln` file is a module. Nothing crosses file boundaries unless exported and imported.
 
@@ -340,7 +340,7 @@ end
 
 ---
 
-## Comment Syntax (Locked)
+## Comment Syntax
 
 ```
 // single-line comment
@@ -349,7 +349,7 @@ let x = 5;   // inline comment
 
 ---
 
-## Operators (Locked Design)
+## Operators
 
 ### Arithmetic — Symbol
 
@@ -394,7 +394,7 @@ not   logical NOT
 
 ---
 
-## Control Flow (Locked Design)
+## Control Flow
 
 ### Conditionals
 
